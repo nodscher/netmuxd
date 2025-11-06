@@ -66,20 +66,24 @@ async fn main() {
     if config.use_unix {
         let manager_sender = manager_sender.clone();
         let pairing_file_finder = PairingFileFinder::new(&config);
+        let Some(socket_path) = config.unix_socket_path.clone() else { 
+            error!("Unix socket path not specified");
+            std::process::exit(1);
+         };
         tokio::spawn(async move {
             // Delete old Unix socket
             info!("Deleting old Unix socket");
-            std::fs::remove_file("/var/run/usbmuxd").unwrap_or_default();
+            std::fs::remove_file(&socket_path).unwrap_or_default();
             // Create UnixListener
             info!("Binding to new Unix socket");
-            let listener = tokio::net::UnixListener::bind("/var/run/usbmuxd")
+            let listener = tokio::net::UnixListener::bind(&socket_path)
                 .expect("Unable to bind to unix socket");
             // Change the permission of the socket
             info!("Changing permissions of socket");
-            fs::set_permissions("/var/run/usbmuxd", fs::Permissions::from_mode(0o666))
+            fs::set_permissions(&socket_path, fs::Permissions::from_mode(0o666))
                 .expect("Unable to set socket file permissions");
 
-            println!("Listening on /var/run/usbmuxd");
+            println!("Listening on {}", socket_path);
 
             loop {
                 let (socket, _) = match listener.accept().await {

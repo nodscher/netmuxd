@@ -8,6 +8,8 @@ pub struct NetmuxdConfig {
     pub use_heartbeat: bool,
     pub use_unix: bool,
     pub use_mdns: bool,
+    #[cfg(unix)]
+    pub unix_socket_path: Option<String>,
 }
 
 impl NetmuxdConfig {
@@ -22,6 +24,8 @@ impl NetmuxdConfig {
             use_heartbeat: true,
             use_unix: true,
             use_mdns: true,
+            #[cfg(unix)]
+            unix_socket_path: Some("/var/run/usbmuxd".to_string()),
         }
     }
     pub fn collect() -> Self {
@@ -68,6 +72,16 @@ impl NetmuxdConfig {
                     res.use_heartbeat = false;
                     i += 1;
                 }
+                #[cfg(unix)]
+                "--unix-socket" => {
+                    res.unix_socket_path = Some(
+                        std::env::args()
+                            .nth(i + 1)
+                            .expect("unix socket flag passed without path")
+                            .to_string(),
+                    );
+                    i += 2;
+                }
                 "-h" | "--help" => {
                     println!("netmuxd - a network multiplexer");
                     println!("Usage:");
@@ -79,6 +93,7 @@ impl NetmuxdConfig {
                     println!("  --disable-heartbeat");
                     #[cfg(unix)]
                     println!("  --disable-unix");
+                    println!("  --unix-socket <path>");
                     println!("  --disable-mdns");
                     println!("  -h, --help");
                     println!("  --about");
